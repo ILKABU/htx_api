@@ -3,6 +3,9 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+)
 
 from .const import DOMAIN, TARGET_PAYMENT_METHODS
 from . import HTXDataUpdateCoordinator
@@ -24,7 +27,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(sensors)
 
-class HTXPriceSensor(SensorEntity, CoordinatorEntity):
+class HTXPriceSensor(CoordinatorEntity, SensorEntity):  # Поменял порядок наследования
     """Representation of a HTX API price sensor."""
 
     def __init__(
