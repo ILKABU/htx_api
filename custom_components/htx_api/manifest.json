@@ -5,8 +5,11 @@
   "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/htx_api/issues",
   "dependencies": [],
   "codeowners": ["@YOUR_GITHUB_USERNAME"],
-  "requirements": ["aiohttp"],
+  "requirements": [
+    "aiohttp>=3.8.0"
+  ],
   "iot_class": "cloud_polling",
   "version": "1.0.0",
-  "config_flow": true
+  "config_flow": true,
+  "integration_type": "service"
 }
