@@ -7,7 +7,6 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.update_coordinator import (
@@ -16,7 +15,14 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .const import DOMAIN, SCAN_INTERVAL, PAYMENT_METHODS, TARGET_PAYMENT_METHODS, BASE_URL
+from .const import (
+    DOMAIN,
+    DEFAULT_SCAN_INTERVAL,
+    CONF_SCAN_INTERVAL,
+    PAYMENT_METHODS,
+    TARGET_PAYMENT_METHODS,
+    BASE_URL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,13 +30,16 @@ PLATFORMS = [Platform.SENSOR]
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
-        vol.Optional(CONF_SCAN_INTERVAL, default=SCAN_INTERVAL): cv.time_period,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
     })
 }, extra=vol.ALLOW_EXTRA)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HTX API from a config entry."""
-    coordinator = HTXDataUpdateCoordinator(hass)
+    coordinator = HTXDataUpdateCoordinator(
+        hass,
+        update_interval=timedelta(seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL.total_seconds()))
+    )
     
     try:
         await coordinator.async_config_entry_first_refresh()
@@ -47,21 +56,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        await coordinator.async_shutdown()
     return unload_ok
 
 class HTXDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching HTX API data."""
 
-    def __init__(self, hass: HomeAssistant):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        update_interval: timedelta = DEFAULT_SCAN_INTERVAL,
+    ):
         """Initialize."""
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL,
+            update_interval=update_interval,
         )
         self.http_session = aiohttp.ClientSession()
 
