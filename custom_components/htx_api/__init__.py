@@ -1,65 +1,5 @@
 """HTX API integration for Home Assistant."""
-from datetime import timedelta
-import logging
-import aiohttp
-import voluptuous as vol
-
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
-
-from .const import (
-    DOMAIN,
-    DEFAULT_SCAN_INTERVAL,
-    CONF_SCAN_INTERVAL,
-    PAYMENT_METHODS,
-    TARGET_PAYMENT_METHODS,
-    BASE_URL,
-)
-
-_LOGGER = logging.getLogger(__name__)
-
-PLATFORMS = [Platform.SENSOR]
-
-CONFIG_SCHEMA = vol.Schema({
-    DOMAIN: vol.Schema({
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
-    })
-}, extra=vol.ALLOW_EXTRA)
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up HTX API from a config entry."""
-    coordinator = HTXDataUpdateCoordinator(
-        hass,
-        update_interval=timedelta(seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL.total_seconds()))
-    )
-    
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as err:
-        _LOGGER.error("Error setting up HTX API integration: %s", err)
-        return False
-    
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-    
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
-    return True
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        await coordinator.async_shutdown()
-    return unload_ok
+# ... (предыдущие импорты остаются теми же)
 
 class HTXDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching HTX API data."""
@@ -77,6 +17,10 @@ class HTXDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=update_interval,
         )
         self.http_session = aiohttp.ClientSession()
+
+    def _format_number(self, number: float) -> float:
+        """Format number to 2 decimal places."""
+        return round(float(number), 2)
 
     async def _async_update_data(self):
         """Fetch data from HTX API."""
@@ -146,26 +90,17 @@ class HTXDataUpdateCoordinator(DataUpdateCoordinator):
             if relevant_items:
                 item = relevant_items[0]  # Get best offer
                 result[method] = {
-                    "price": float(item["price"]),
-                    "available": float(item["tradeCount"]),
-                    "min_limit": float(item["minTradeLimit"]),
-                    "max_limit": float(item["maxTradeLimit"]),
-                    "raw_data": item
+                    "price": self._format_number(item["price"]),
+                    "available": self._format_number(item["tradeCount"]),
+                    "min_limit": self._format_number(item["minTradeLimit"]),
+                    "max_limit": self._format_number(item["maxTradeLimit"]),
+                    "raw_data": item,
+                    "last_update": datetime.now().isoformat()
                 }
             else:
                 result[method] = None
                 
         return result
-
-    def _get_payment_method_names(self, pay_method, pay_methods):
-        """Get payment method names from codes."""
-        if pay_methods and isinstance(pay_methods, list):
-            return ", ".join(PAYMENT_METHODS.get(str(m["payMethodId"]), m["name"]) 
-                           for m in pay_methods)
-        elif pay_method:
-            return ", ".join(PAYMENT_METHODS.get(id_str, id_str) 
-                           for id_str in pay_method.split(","))
-        return "Неизвестный метод"
 
     async def async_shutdown(self):
         """Close HTTP session."""
