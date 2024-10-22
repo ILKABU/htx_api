@@ -1,0 +1,11 @@
+{
+  "domain": "htx_api",
+  "name": "HTX API",
+  "documentation": "https://github.com/YOUR_GITHUB_USERNAME/htx_api",
+  "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/htx_api/issues",
+  "dependencies": [],
+  "codeowners": ["@YOUR_GITHUB_USERNAME"],
+  "requirements": ["aiohttp"],
+  "iot_class": "cloud_polling",
+  "version": "1.0.0"
+}
