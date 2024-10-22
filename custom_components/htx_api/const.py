@@ -2,7 +2,8 @@
 from datetime import timedelta
 
 DOMAIN = "htx_api"
-SCAN_INTERVAL = timedelta(minutes=1)
+DEFAULT_SCAN_INTERVAL = timedelta(seconds=1)  # Изменено с минуты на секунду
+CONF_SCAN_INTERVAL = "scan_interval"
 
 PAYMENT_METHODS = {
     "28": "Тинькофф",
