@@ -3,6 +3,7 @@ from datetime import timedelta
 
 DOMAIN = "htx_api"
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=20)
+CONF_SCAN_INTERVAL = "scan_interval"  # Добавляем пропущенную константу
 
 PAYMENT_METHODS = {
     "28": "Тинькофф",
