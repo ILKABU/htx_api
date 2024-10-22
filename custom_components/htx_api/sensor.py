@@ -3,10 +3,11 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import CURRENCY_RUBLE
 
 from .const import DOMAIN, TARGET_PAYMENT_METHODS
 from . import HTXDataUpdateCoordinator
+
+CURRENCY_RUBLE = "RUB"  # Определяем константу локально
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HTX API sensors based on a config entry."""
@@ -42,6 +43,7 @@ class HTXPriceSensor(SensorEntity, CoordinatorEntity):
         self._attr_native_unit_of_measurement = CURRENCY_RUBLE
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:currency-rub"
+        self.entity_id = f"sensor.htx_{trade_type}_{payment_method.lower()}".replace(" ", "_")
 
     @property
     def native_value(self):
