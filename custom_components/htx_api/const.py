@@ -2,8 +2,7 @@
 from datetime import timedelta
 
 DOMAIN = "htx_api"
-DEFAULT_SCAN_INTERVAL = timedelta(seconds=20)  # Изменено с 1 секунды на 20 секунд
-CONF_SCAN_INTERVAL = "scan_interval"
+DEFAULT_SCAN_INTERVAL = timedelta(seconds=20)
 
 PAYMENT_METHODS = {
     "28": "Тинькофф",
@@ -18,3 +17,6 @@ PAYMENT_METHODS = {
 
 TARGET_PAYMENT_METHODS = ["Сбербанк", "Тинькофф", "Райффайзенбанк", "СБП"]
 BASE_URL = "https://otc-api.trygofast.com/v1/data/trade-market"
+
+# Список исключенных пользователей
+EXCLUDED_USERS = ["PAXBID", "RushRubleMini-A"]
