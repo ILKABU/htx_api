@@ -8,9 +8,8 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import DOMAIN, TARGET_PAYMENT_METHODS
-from . import HTXDataUpdateCoordinator
 
-CURRENCY_RUBLE = "RUB"  # Определяем константу локально
+CURRENCY_RUBLE = "RUB"
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HTX API sensors based on a config entry."""
@@ -27,12 +26,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(sensors)
 
-class HTXPriceSensor(CoordinatorEntity, SensorEntity):  # Поменял порядок наследования
+class HTXPriceSensor(CoordinatorEntity, SensorEntity):
     """Representation of a HTX API price sensor."""
 
     def __init__(
         self,
-        coordinator: HTXDataUpdateCoordinator,
+        coordinator,
         trade_type: str,
         payment_method: str,
     ):
@@ -48,13 +47,20 @@ class HTXPriceSensor(CoordinatorEntity, SensorEntity):  # Поменял пор�
         self._attr_icon = "mdi:currency-rub"
         self.entity_id = f"sensor.htx_{trade_type}_{payment_method.lower()}".replace(" ", "_")
 
+    def _format_value(self, value):
+        """Format numeric value to 2 decimal places."""
+        try:
+            return f"{float(value):.2f}"
+        except (ValueError, TypeError):
+            return value
+
     @property
     def native_value(self):
         """Return the state of the sensor."""
         data = self.coordinator.data[self.trade_type].get(self.payment_method)
         if data is None:
             return None
-        return data["price"]
+        return self._format_value(data["price"])
 
     @property
     def extra_state_attributes(self):
@@ -68,7 +74,7 @@ class HTXPriceSensor(CoordinatorEntity, SensorEntity):  # Поменял пор�
             }
         
         return {
-            "available": data["available"],
-            "min_limit": data["min_limit"],
-            "max_limit": data["max_limit"],
+            "available": self._format_value(data["available"]),
+            "min_limit": self._format_value(data["min_limit"]),
+            "max_limit": self._format_value(data["max_limit"]),
         }
