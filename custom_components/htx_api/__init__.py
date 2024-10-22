@@ -3,8 +3,10 @@ from datetime import timedelta
 import logging
 import aiohttp
 import voluptuous as vol
+
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import config_validation as cv
@@ -18,27 +20,37 @@ from .const import DOMAIN, SCAN_INTERVAL, PAYMENT_METHODS, TARGET_PAYMENT_METHOD
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS = [Platform.SENSOR]
+
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
         vol.Optional(CONF_SCAN_INTERVAL, default=SCAN_INTERVAL): cv.time_period,
     })
-})
-
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the HTX API component."""
-    hass.data[DOMAIN] = {}
-    return True
+}, extra=vol.ALLOW_EXTRA)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HTX API from a config entry."""
     coordinator = HTXDataUpdateCoordinator(hass)
-    await coordinator.async_config_entry_first_refresh()
     
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.error("Error setting up HTX API integration: %s", err)
+        return False
+    
+    hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
     return True
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 class HTXDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching HTX API data."""
@@ -86,16 +98,20 @@ class HTXDataUpdateCoordinator(DataUpdateCoordinator):
                 "isFollowed": "false"
             }
             
-            async with self.http_session.get(BASE_URL, params=params) as response:
-                if response.status != 200:
-                    raise UpdateFailed(f"API returned {response.status}")
-                
-                data = await response.json()
-                if not data.get("data"):
-                    break
+            try:
+                async with self.http_session.get(BASE_URL, params=params) as response:
+                    if response.status != 200:
+                        raise UpdateFailed(f"API returned {response.status}")
                     
-                all_data.extend(data["data"])
-                page += 1
+                    data = await response.json()
+                    if not data.get("data"):
+                        break
+                        
+                    all_data.extend(data["data"])
+                    page += 1
+            except Exception as err:
+                _LOGGER.error("Error fetching data from HTX API: %s", err)
+                break
                 
         return [item for item in all_data if float(item["minTradeLimit"]) >= 10000]
 
@@ -137,3 +153,7 @@ class HTXDataUpdateCoordinator(DataUpdateCoordinator):
             return ", ".join(PAYMENT_METHODS.get(id_str, id_str) 
                            for id_str in pay_method.split(","))
         return "Неизвестный метод"
+
+    async def async_shutdown(self):
+        """Close HTTP session."""
+        await self.http_session.close()
