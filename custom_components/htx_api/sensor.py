@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import DOMAIN, TARGET_PAYMENT_METHODS
 
-CURRENCY_RUBLE = "₽"  # Изменено с "RUB" на символ рубля
+CURRENCY_RUBLE = "₽"  
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HTX API sensors based on a config entry."""
@@ -43,7 +43,7 @@ class HTXPriceSensor(CoordinatorEntity, SensorEntity):
         # Обновлённое форматирование имени и ID сенсора
         self._attr_name = f"HTX P2P {trade_type.title()} {payment_method} USDT/RUB"
         self._attr_unique_id = f"htx_p2p_{trade_type}_{payment_method.lower()}_usdt_rub"
-        self._attr_native_unit_of_measurement = CURRENCY_RUBLE
+      # self._attr_native_unit_of_measurement = CURRENCY_RUBLE
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:bitcoin"
         
